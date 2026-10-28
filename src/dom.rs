@@ -386,7 +386,23 @@ pub(crate) mod assets {
     /// assets are unambiguously *not* source. Resolved from the manifest dir
     /// like [`super::super::NzkUi::frontend_dir`], so tests and the CLI agree.
     pub fn css_dir() -> PathBuf {
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/css")
+        // Packaged installs carry the sheets beside the frontend and point here.
+        if let Some(dir) = std::env::var_os("CSVIEWER_NZK_UI_ASSETS") {
+            return PathBuf::from(dir);
+        }
+        let here = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let bundled = here.join("assets/css");
+        if bundled.is_dir() {
+            return bundled;
+        }
+        // AppImage layout: <share>/frontend + <share>/assets/css.
+        if let Some(parent) = crate::NzkUi::frontend_dir().parent() {
+            let sibling = parent.join("assets/css");
+            if sibling.is_dir() {
+                return sibling;
+            }
+        }
+        bundled
     }
 
     /// Read one asset sheet by file name.
